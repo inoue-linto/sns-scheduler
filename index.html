@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SNS Scheduler</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;400;500;700&family=Cormorant+Garamond:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --white: #ffffff;
+  --bg: #faf9f7;
+  --bg2: #f4f2ef;
+  --border: #e8e3dd;
+  --border2: #d4cdc5;
+  --text: #2c2825;
+  --text-sub: #7a7470;
+  --text-light: #b0aaa4;
+  --rose: #d4737a;
+  --rose-light: #fdf0f1;
+  --rose-mid: #f0c8cb;
+  --sage: #7a9e8e;
+  --sage-light: #eef4f1;
+  --sand: #c9a882;
+  --sand-light: #fdf6ee;
+  --lavender: #9b8fbb;
+  --lavender-light: #f3f0f8;
+  --radius: 12px;
+  --shadow: 0 2px 12px rgba(44,40,37,0.06);
+  --shadow-md: 0 4px 24px rgba(44,40,37,0.10);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Zen Kaku Gothic New', sans-serif;
+  font-size: 13px;
+  min-height: 100vh;
+}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ─── TOPBAR ─── */
+.topbar {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky; top: 0; z-index: 200;
+}
+.logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  color: var(--text);
+}
+.logo span { color: var(--rose); }
+.topbar-nav { display: flex; align-items: center; gap: 6px; }
+.nav-btn {
+  padding: 7px 16px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--white); color: var(--text-sub); font-family: inherit;
+  font-size: 12px; cursor: pointer; transition: all 0.15s; font-weight: 500;
+}
+.nav-btn:hover { border-color: var(--rose); color: var(--rose); }
+.nav-btn.active { background: var(--rose); border-color: var(--rose); color: var(--white); }
+.nav-divider { width: 1px; height: 24px; background: var(--border); margin: 0 6px; }
+
+/* ─── LAYOUT ─── */
+.layout { display: flex; height: calc(100vh - 56px); }
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  width: 240px; flex-shrink: 0;
+  background: var(--white);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex; flex-direction: column;
+}
+.sidebar-section {
+  padding: 18px 16px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-section:last-child { border-bottom: none; flex: 1; }
+.section-title {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+  color: var(--text-light); text-transform: uppercase; margin-bottom: 10px;
+}
+
+/* Month nav */
+.month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.month-arrow {
+  width: 28px; height: 28px; border-radius: 7px;
+  background: var(--bg); border: 1px solid var(--border);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: var(--text-sub); transition: all 0.12s;
+}
+.month-arrow:hover { border-color: var(--rose); color: var(--rose); }
+.month-current { font-size: 15px; font-weight: 700; }
+
+/* Progress ring */
+.progress-wrap { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.ring-svg { flex-shrink: 0; }
+.ring-bg { fill: none; stroke: var(--bg2); stroke-width: 4; }
+.ring-fill { fill: none; stroke: var(--rose); stroke-width: 4; stroke-linecap: round; transition: stroke-dashoffset 0.5s; transform: rotate(-90deg); transform-origin: 50% 50%; }
+.ring-info { display: flex; flex-direction: column; }
+.ring-pct { font-size: 20px; font-weight: 700; color: var(--rose); line-height: 1; }
+.ring-label { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
+
+.stat-row { display: flex; gap: 6px; margin-bottom: 10px; }
+.stat-pill {
+  flex: 1; background: var(--bg); border-radius: 8px; border: 1px solid var(--border);
+  padding: 8px 10px; text-align: center;
+}
+.stat-n { font-size: 18px; font-weight: 700; line-height: 1; }
+.stat-l { font-size: 10px; color: var(--text-sub); margin-top: 2px; }
+
+/* Case list */
+.case-list { display: flex; flex-direction: column; gap: 3px; }
+.case-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 8px; border-radius: 8px; cursor: pointer;
+  border: 1px solid transparent; transition: all 0.12s;
+}
+.case-item:hover { background: var(--bg); }
+.case-item.active { background: var(--rose-light); border-color: var(--rose-mid); }
+.case-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.case-name { font-size: 12px; flex: 1; }
+.case-cnt { font-size: 11px; color: var(--text-light); }
+
+/* Staff */
+.staff-list { display: flex; flex-direction: column; gap: 6px; }
+.staff-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.staff-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; flex-shrink: 0;
+}
+.staff-info { flex: 1; }
+.staff-name2 { font-size: 12px; font-weight: 500; }
+.staff-bar-wrap { margin-top: 3px; background: var(--bg2); border-radius: 3px; height: 3px; overflow: hidden; }
+.staff-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+.staff-cnt { font-size: 11px; color: var(--text-sub); white-space: nowrap; }
+
+/* Sidebar btn */
+.sidebar-btn {
+  margin: 12px; padding: 9px; border-radius: 8px;
+  background: var(--rose); border: none; color: var(--white);
+  font-family: inherit; font-size: 12px; font-weight: 700;
+  cursor: pointer; text-align: center; transition: opacity 0.15s;
+  letter-spacing: 0.3px;
+}
+.sidebar-btn:hover { opacity: 0.88; }
+.sidebar-btn.outline {
+  background: var(--white); color: var(--rose); border: 1px solid var(--rose-mid);
+}
+
+/* ─── MAIN ─── */
+main { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+
+/* ─── TOOLBAR ─── */
+.toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.filter-chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.chip {
+  padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 500;
+  border: 1px solid var(--border); background: var(--white); color: var(--text-sub);
+  cursor: pointer; transition: all 0.12s; white-space: nowrap;
+}
+.chip:hover:not(.active) { border-color: var(--rose-mid); color: var(--rose); }
+.chip.active { background: var(--rose); border-color: var(--rose); color: var(--white); }
+.ml-auto { margin-left: auto; }
+
+/* ─── CALENDAR ─── */
+.calendar-wrap { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.cal-header-row {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  border-bottom: 1px solid var(--border);
+}
+.cal-dh {
+  text-align: center; font-size: 11px; font-weight: 700;
+  color: var(--text-light); padding: 10px; letter-spacing: 0.5px;
+}
+.cal-dh.sun { color: var(--rose); }
+.cal-dh.sat { color: var(--lavender); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+.cal-cell {
+  border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  min-height: 88px; padding: 7px 6px; cursor: pointer;
+  transition: background 0.12s; position: relative;
+}
+.cal-cell:nth-child(7n) { border-right: none; }
+.cal-cell:hover { background: var(--rose-light); }
+.cal-cell.today { background: var(--rose-light); }
+.cal-cell.other { opacity: 0.35; }
+.cal-num {
+  font-size: 12px; font-weight: 600; margin-bottom: 4px;
+  width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+}
+.cal-cell.today .cal-num { background: var(--rose); color: var(--white); }
+.cal-cell.sun .cal-num { color: var(--rose); }
+.cal-cell.sat .cal-num { color: var(--lavender); }
+.cal-events { display: flex; flex-direction: column; gap: 2px; }
+.cal-ev {
+  font-size: 9px; padding: 2px 5px; border-radius: 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  cursor: pointer;
+}
+.cal-more { font-size: 9px; color: var(--text-light); margin-top: 1px; }
+
+/* ─── LIST VIEW ─── */
+.list-view { display: flex; flex-direction: column; gap: 4px; }
+.day-group { margin-bottom: 6px; }
+.day-label {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 0 5px;
+  position: sticky; top: -20px; z-index: 10; background: var(--bg);
+}
+.day-badge {
+  font-size: 12px; font-weight: 700;
+  background: var(--white); border: 1px solid var(--border);
+  padding: 3px 10px; border-radius: 6px;
+}
+.day-badge.today { background: var(--rose); border-color: var(--rose); color: var(--white); }
+.day-wday { font-size: 11px; color: var(--text-light); }
+.day-wday.sun { color: var(--rose); }
+.day-wday.sat { color: var(--lavender); }
+
+.post-card {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 14px;
+  display: grid; grid-template-columns: 32px 1fr auto;
+  align-items: center; gap: 12px;
+  cursor: pointer; transition: all 0.12s; margin-bottom: 3px;
+}
+.post-card:hover { border-color: var(--rose-mid); box-shadow: var(--shadow); }
+.post-card.done { opacity: 0.5; }
+
+.check-circle {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 2px solid var(--border2); background: var(--white);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; transition: all 0.15s;
+}
+.check-circle.checked { background: var(--rose); border-color: var(--rose); }
+.check-circle svg { display: none; }
+.check-circle.checked svg { display: block; }
+
+.card-body { display: flex; flex-direction: column; gap: 5px; }
+.card-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.case-tag {
+  font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 5px;
+  display: flex; align-items: center; gap: 4px;
+}
+.pf-tags { display: flex; gap: 3px; flex-wrap: wrap; }
+.pf-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; background: #f0eeec; color: var(--text); }
+.effort-badge { display: none; }
+
+.card-bottom { display: flex; align-items: center; gap: 6px; }
+.staff-chip {
+  display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-sub);
+}
+.sa { width: 18px; height: 18px; border-radius: 50%; font-size: 9px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.memo-chip { font-size: 11px; color: var(--text-light); }
+
+.card-actions { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+.icon-btn {
+  width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--border);
+  background: var(--white); cursor: pointer; font-size: 12px; color: var(--text-sub);
+  display: flex; align-items: center; justify-content: center; transition: all 0.12s;
+}
+.icon-btn:hover { border-color: var(--rose); color: var(--rose); }
+.icon-btn.del:hover { border-color: #e74c3c; color: #e74c3c; }
+
+/* ─── MODAL OVERLAY ─── */
+.overlay {
+  position: fixed; inset: 0; background: rgba(44,40,37,0.35);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 500; padding: 20px;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+.overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--white); border-radius: 16px;
+  width: 520px; max-width: 100%; max-height: 90vh; overflow-y: auto;
+  box-shadow: var(--shadow-md);
+  transform: translateY(10px); transition: transform 0.2s;
+}
+.overlay.open .modal { transform: translateY(0); }
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 22px 14px; border-bottom: 1px solid var(--border);
+}
+.modal-ttl { font-size: 17px; font-weight: 700; }
+.close-btn {
+  width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg); cursor: pointer; font-size: 14px; color: var(--text-sub);
+  display: flex; align-items: center; justify-content: center; transition: all 0.12s;
+}
+.close-btn:hover { border-color: var(--rose); color: var(--rose); }
+.modal-body { padding: 18px 22px; display: flex; flex-direction: column; gap: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-label { font-size: 11px; font-weight: 700; color: var(--text-sub); letter-spacing: 0.5px; }
+.form-input, .form-select, .form-textarea {
+  background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); border-radius: 8px; padding: 9px 12px;
+  font-size: 13px; font-family: inherit; width: 100%; outline: none;
+  transition: border-color 0.15s;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--rose); background: var(--white); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.cb-group { display: flex; flex-wrap: wrap; gap: 6px; }
+.cb-input { display: none; }
+.cb-label {
+  padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border);
+  font-size: 11px; cursor: pointer; transition: all 0.12s; font-weight: 500;
+  color: var(--text-sub); user-select: none;
+}
+.cb-input:checked + .cb-label { background: var(--rose); border-color: var(--rose); color: var(--white); }
+
+.modal-foot {
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 14px 22px; border-top: 1px solid var(--border);
+}
+.btn { padding: 8px 20px; border-radius: 8px; border: 1px solid transparent; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+.btn-primary { background: var(--rose); color: var(--white); }
+.btn-primary:hover { opacity: 0.88; }
+.btn-ghost { background: var(--bg); border-color: var(--border); color: var(--text-sub); }
+.btn-ghost:hover { border-color: var(--rose-mid); color: var(--rose); }
+
+/* ─── GENERATE PANEL ─── */
+.gen-panel {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px 20px;
+}
+.gen-top { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.gen-title { font-size: 15px; font-weight: 700; flex: 1; }
+.gen-info { font-size: 12px; color: var(--text-sub); line-height: 1.6; }
+.gen-result {
+  margin-top: 12px; padding: 12px; background: var(--bg); border-radius: 8px;
+  font-size: 12px; color: var(--text-sub); line-height: 1.8;
+  display: none;
+}
+.gen-result.show { display: block; }
+
+/* ─── CASE MGMT ─── */
+.case-mgmt-list { display: flex; flex-direction: column; gap: 6px; }
+.case-mgmt-item {
+  background: var(--white); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 14px; display: flex; align-items: flex-start; gap: 10px;
+}
+.case-color-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
+.case-mgmt-body { flex: 1; }
+.case-mgmt-name { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+.case-mgmt-meta { font-size: 11px; color: var(--text-sub); display: flex; gap: 8px; flex-wrap: wrap; }
+.case-mgmt-actions { display: flex; gap: 4px; }
+
+/* ─── TABS ─── */
+.tab-strip {
+  display: flex; gap: 0; border-bottom: 1px solid var(--border);
+  background: var(--white); border-radius: 12px 12px 0 0;
+}
+.tab-btn {
+  padding: 12px 20px; font-family: inherit; font-size: 13px; font-weight: 500;
+  border: none; background: transparent; cursor: pointer; color: var(--text-sub);
+  border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s;
+}
+.tab-btn.active { color: var(--rose); border-bottom-color: var(--rose); }
+.tab-btn:hover:not(.active) { color: var(--text); }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* ─── EMPTY STATE ─── */
+.empty {
+  text-align: center; padding: 60px 20px; color: var(--text-light);
+}
+.empty-icon { font-size: 36px; margin-bottom: 10px; }
+.empty-text { font-size: 14px; margin-bottom: 4px; color: var(--text-sub); }
+.empty-sub { font-size: 12px; }
+
+/* ─── MOBILE RESPONSIVE ─── */
+@media (max-width: 768px) {
+  /* TOPBAR: ロゴ1行目・ナビ2行目（横スクロール） */
+  .topbar {
+    height: auto;
+    padding: 0 12px;
+    flex-wrap: wrap;
+    gap: 0;
+    position: sticky; top: 0; z-index: 200;
+  }
+  .logo { padding: 10px 0; font-size: 18px; }
+  .topbar-nav {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    padding: 6px 0 8px;
+    border-top: 1px solid var(--border);
+    scrollbar-width: none;
+    gap: 4px;
+  }
+  .topbar-nav::-webkit-scrollbar { display: none; }
+  .nav-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 6px 11px;
+    font-size: 11px;
+  }
+  .nav-divider { flex-shrink: 0; }
+
+  /* LAYOUT: 縦積みに変更 */
+  .layout { flex-direction: column; height: auto; }
+
+  /* SIDEBAR: 上部の横長パネルに変換 */
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    overflow-y: visible;
+    overflow-x: hidden;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .sidebar > .sidebar-section { width: 100%; }
+
+  /* スタッフセクション非表示 */
+  .sidebar > .sidebar-section:nth-child(3) { display: none; }
+
+  /* 月・進捗・統計 コンパクト化 */
+  .sidebar > .sidebar-section:first-child {
+    padding: 10px 14px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .progress-wrap { gap: 10px; margin-bottom: 6px; }
+  .ring-svg { width: 44px; height: 44px; }
+  .ring-bg  { stroke-width: 3.5; }
+  .ring-fill { stroke-width: 3.5; }
+  .ring-pct { font-size: 15px; }
+  .ring-label { font-size: 10px; }
+  .stat-n { font-size: 15px; }
+  .stat-pill { padding: 5px 6px; }
+  .stat-l { font-size: 9px; }
+
+  /* 案件リスト → 横スクロールチップ */
+  .sidebar > .sidebar-section:nth-child(2) {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-title { margin-bottom: 6px; }
+  .case-list {
+    flex-direction: row;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+  .case-list::-webkit-scrollbar { display: none; }
+  .case-item {
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 5px 10px;
+  }
+  .case-name { font-size: 11px; }
+  .case-cnt { font-size: 10px; }
+
+  /* アクションボタン → 横並び */
+  .sidebar > .sidebar-btn {
+    flex: 1;
+    margin: 6px 4px 8px;
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+  .sidebar > .sidebar-btn:first-of-type { margin-left: 12px; }
+  .sidebar > .sidebar-btn:last-of-type  { margin-right: 12px; }
+
+  /* MAIN */
+  main { padding: 10px 12px; gap: 10px; }
+
+  /* フィルターバー → 横スクロール */
+  .toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .toolbar::-webkit-scrollbar { display: none; }
+  .filter-chips { flex-wrap: nowrap; flex-shrink: 0; }
+  .ml-auto { margin-left: 8px; flex-shrink: 0; }
+  #searchInput { width: 110px !important; }
+
+  /* 投稿カード: アクションボタン非表示・2列グリッド */
+  .post-card {
+    grid-template-columns: 28px 1fr;
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .card-actions { display: none; }
+  .card-top { gap: 6px; }
+  .case-tag { font-size: 10px; padding: 2px 6px; }
+
+  /* カレンダー: コンパクト化 */
+  .cal-cell { min-height: 52px; padding: 3px 2px; }
+  .cal-num  { font-size: 10px; width: 18px; height: 18px; }
+  .cal-ev   { font-size: 7px; padding: 1px 3px; }
+  .cal-dh   { font-size: 10px; padding: 6px 2px; }
+
+  /* モーダル → ボトムシート */
+  .overlay { padding: 0; align-items: flex-end; }
+  .modal {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 20px 20px 0 0;
+    max-height: 92vh;
+  }
+  .form-row { grid-template-columns: 1fr; }
+  .modal-head { padding: 16px 18px 12px; }
+  .modal-body { padding: 14px 18px; gap: 12px; }
+  .modal-foot { padding: 12px 18px; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">SNS <span>Scheduler</span></div>
+  <div class="topbar-nav">
+    <button class="nav-btn active" id="tabSchedule" onclick="showTab('schedule')">スケジュール</button>
+    <button class="nav-btn" id="tabCases" onclick="showTab('cases')">案件管理</button>
+    <button class="nav-btn" id="tabStaff" onclick="showTab('staff')">スタッフ管理</button>
+    <div class="nav-divider"></div>
+    <button class="nav-btn active" id="viewList" onclick="setView('list')">リスト</button>
+    <button class="nav-btn" id="viewCal" onclick="setView('cal')">カレンダー</button>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="month-nav">
+        <button class="month-arrow" id="prevM">‹</button>
+        <div class="month-current" id="monthLbl"></div>
+        <button class="month-arrow" id="nextM">›</button>
+      </div>
+      <div class="progress-wrap">
+        <svg class="ring-svg" width="56" height="56" viewBox="0 0 56 56">
+          <circle class="ring-bg" cx="28" cy="28" r="22"/>
+          <circle class="ring-fill" id="ringCircle" cx="28" cy="28" r="22" stroke-dasharray="138.2" stroke-dashoffset="138.2"/>
+        </svg>
+        <div class="ring-info">
+          <div class="ring-pct" id="ringPct">0%</div>
+          <div class="ring-label">完了率</div>
+        </div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-pill">
+          <div class="stat-n" id="statTotal">0</div>
+          <div class="stat-l">総投稿</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-n" style="color:var(--rose)" id="statDone">0</div>
+          <div class="stat-l">完了</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-n" style="color:var(--sand)" id="statLeft">0</div>
+          <div class="stat-l">残り</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-title">案件</div>
+      <div class="case-list" id="sidebarCases"></div>
+    </div>
+
+    <div class="sidebar-section" style="flex:1">
+      <div class="section-title">担当スタッフ</div>
+      <div class="staff-list" id="sidebarStaff"></div>
+    </div>
+
+    <button class="sidebar-btn" onclick="openAddPost()">＋ 投稿を追加</button>
+    <button class="sidebar-btn outline" onclick="showTab('schedule');openGenerate()">⚡ 月間自動生成</button>
+  </div>
+
+  <!-- MAIN -->
+  <main id="mainArea">
+    <!-- Schedule Tab -->
+    <div id="tabPaneSchedule">
+      <div class="toolbar">
+        <div class="filter-chips" id="filterChips"></div>
+        <div class="ml-auto">
+          <input type="text" class="form-input" id="searchInput" style="width:160px;padding:6px 10px;font-size:12px" placeholder="🔍 検索..." oninput="render()">
+        </div>
+      </div>
+      <div id="contentArea"></div>
+    </div>
+
+    <!-- Cases Tab -->
+    <div id="tabPaneCases" style="display:none">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn btn-primary" onclick="openCaseModal()">＋ 案件を追加</button>
+      </div>
+      <div class="case-mgmt-list" id="caseMgmtList"></div>
+    </div>
+
+    <!-- Staff Tab -->
+    <div id="tabPaneStaff" style="display:none">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn btn-primary" onclick="openStaffModal()">＋ スタッフを追加</button>
+      </div>
+      <div id="staffMgmtList"></div>
+    </div>
+  </main>
+</div>
+
+<!-- ─── ADD/EDIT POST MODAL ─── -->
+<div class="overlay" id="postOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-ttl" id="postModalTitle">投稿を追加</div>
+      <button class="close-btn" onclick="closePostModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">日付</label>
+          <input type="date" class="form-input" id="fDate">
+        </div>
+        <div class="form-group">
+          <label class="form-label">案件</label>
+          <select class="form-select" id="fCase" onchange="onCaseChange()"></select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">投稿先プラットフォーム</label>
+        <div class="cb-group" id="fPlatforms"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">担当スタッフ</label>
+          <select class="form-select" id="fStaff"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">工数</label>
+          <select class="form-select" id="fEffort">
+            <option value="hard">大変</option>
+            <option value="mid" selected>普通</option>
+            <option value="easy">簡単</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">メモ</label>
+        <input type="text" class="form-input" id="fMemo" placeholder="補足メモ">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closePostModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="savePost()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── CASE MODAL ─── -->
+<div class="overlay" id="caseOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-ttl" id="caseModalTitle">案件を追加</div>
+      <button class="close-btn" onclick="closeCaseModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">案件名</label>
+          <input type="text" class="form-input" id="cName" placeholder="例: florasKIN JP">
+        </div>
+        <div class="form-group">
+          <label class="form-label">カラー</label>
+          <input type="color" class="form-input" id="cColor" value="#d4737a" style="height:40px;padding:4px">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">利用プラットフォーム（複数選択）</label>
+        <div class="cb-group" id="cPlatforms"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">投稿曜日</label>
+        <div class="cb-group" id="cWeekdays"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">工数</label>
+          <select class="form-select" id="cEffort">
+            <option value="hard">大変</option>
+            <option value="mid" selected>普通</option>
+            <option value="easy">簡単</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">祝日ルール</label>
+          <select class="form-select" id="cHoliday">
+            <option value="next">翌平日に振替</option>
+            <option value="skip">お休み（スキップ）</option>
+            <option value="none">特になし</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">月間投稿本数（0で曜日ベース自動）</label>
+        <input type="number" class="form-input" id="cPostCount" value="0" min="0">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeCaseModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveCase()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── STAFF MODAL ─── -->
+<div class="overlay" id="staffOverlay">
+  <div class="modal" style="width:360px">
+    <div class="modal-head">
+      <div class="modal-ttl">スタッフを追加</div>
+      <button class="close-btn" onclick="closeStaffModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">スタッフ名</label>
+        <input type="text" class="form-input" id="sName" placeholder="名前">
+      </div>
+      <div class="form-group">
+        <label class="form-label">カラー</label>
+        <input type="color" class="form-input" id="sColor" value="#d4737a" style="height:40px;padding:4px">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeStaffModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveStaff()">追加</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── GENERATE MODAL ─── -->
+<div class="overlay" id="genOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-ttl">⚡ 月間スケジュール自動生成</div>
+      <button class="close-btn" onclick="closeGenModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-sub);line-height:1.7">
+        設定された案件・曜日・工数ルールをもとに、担当者の負荷が偏らないよう<br>
+        <strong>制約付きランダム</strong>でスケジュールを自動生成します。
+      </p>
+      <div class="form-group">
+        <label class="form-label">対象月</label>
+        <input type="month" class="form-input" id="genMonth">
+      </div>
+      <div id="genPreview" style="margin-top:4px"></div>
+      <div style="background:var(--rose-light);border:1px solid var(--rose-mid);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--rose)">
+        ⚠ 既存のスケジュール（同月）は上書きされます
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeGenModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="runGenerate()">生成する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// DATA
+// ─────────────────────────────────────────────
+const PLATFORMS_MASTER = [
+  { id:'instagram', label:'Instagram', bg:'#fce4ec', color:'#c2185b' },
+  { id:'tiktok',    label:'TikTok',    bg:'#e0f7fa', color:'#00838f' },
+  { id:'youtube',   label:'YouTube',   bg:'#ffebee', color:'#c62828' },
+  { id:'threads',   label:'Threads',   bg:'#f3e5f5', color:'#6a1b9a' },
+  { id:'delivery',  label:'動画納品',   bg:'#fff3e0', color:'#e65100' },
+];
+const WEEKDAY_LABELS = ['日','月','火','水','木','金','土'];
+const EFFORT_MAP = { hard:'大変', mid:'普通', easy:'簡単' };
+const EFFORT_CLS = { hard:'effort-hard', mid:'effort-mid', easy:'effort-easy' };
+
+// ─── Japan Holidays (2025-2026 partial) ───
+const HOLIDAYS = new Set([
+  '2026-01-01','2026-01-12','2026-02-11','2026-02-23',
+  '2026-03-20','2026-04-29','2026-05-03','2026-05-04','2026-05-05',
+  '2026-07-20','2026-08-11','2026-09-21','2026-09-23',
+  '2026-10-12','2026-11-03','2026-11-23','2026-12-23',
+  '2025-01-01','2025-01-13','2025-02-11','2025-02-23','2025-02-24',
+  '2025-03-20','2025-04-29','2025-05-03','2025-05-04','2025-05-05','2025-05-06',
+  '2025-07-21','2025-08-11','2025-09-15','2025-09-23',
+  '2025-10-13','2025-11-03','2025-11-24','2025-12-23',
+]);
+
+function isHoliday(d) { return HOLIDAYS.has(fmtDate(d)); }
+function isWeekend(d) { const wd = d.getDay(); return wd===0||wd===6; }
+function fmtDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function todayStr() { return fmtDate(new Date()); }
+
+// ─── Load / Save ───
+let cases   = JSON.parse(localStorage.getItem('sns_cases')   || 'null');
+let staff   = JSON.parse(localStorage.getItem('sns_staff2')  || 'null');
+let posts   = JSON.parse(localStorage.getItem('sns_posts2')  || '[]');
+
+if (!cases) {
+  cases = [
+    { id:'c1', name:'florasKIN JP',   color:'#d4737a', platforms:['instagram','tiktok','youtube'], weekdays:[1,3,5], effort:'hard', holiday:'next',  postCount:0 },
+    { id:'c2', name:'florasKIN 横浜店',color:'#9b8fbb', platforms:['delivery'],                    weekdays:[1],     effort:'mid',  holiday:'next',  postCount:0 },
+    { id:'c3', name:'florasKIN Threads',color:'#7a9e8e', platforms:['threads'],                    weekdays:[1,2,3,4,5], effort:'mid', holiday:'next', postCount:0 },
+    { id:'c4', name:'florasKIN 高槻店',color:'#c9a882', platforms:['instagram','tiktok'],          weekdays:[1,2,3,4,5], effort:'hard', holiday:'skip', postCount:0 },
+  ];
+}
+if (!staff) {
+  staff = [
+    { id:'s1', name:'井上', color:'#9b8fbb' },
+    { id:'s2', name:'麓',   color:'#d4737a' },
+  ];
+}
+function saveCases() { localStorage.setItem('sns_cases', JSON.stringify(cases)); }
+function saveStaffLS() { localStorage.setItem('sns_staff2', JSON.stringify(staff)); }
+function savePosts() { localStorage.setItem('sns_posts2', JSON.stringify(posts)); }
+
+// Seed sample posts if empty
+if (posts.length === 0) { runGenerate('2026-02', true); }
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let currentYear = new Date().getFullYear();
+let currentMonth = new Date().getMonth() + 1;
+let currentView = 'list';
+let filterCase = 'all';
+let filterPF = 'all';
+let editingPostId = null;
+let editingCaseId = null;
+let currentTab = 'schedule';
+
+// ─────────────────────────────────────────────
+// AUTO GENERATE (Constrained Random)
+// ─────────────────────────────────────────────
+function runGenerate(monthStr, silent) {
+  const [yr, mo] = (monthStr || document.getElementById('genMonth')?.value || `${currentYear}-${String(currentMonth).padStart(2,'0')}`).split('-').map(Number);
+
+  // Remove existing posts for this month
+  posts = posts.filter(p => {
+    const [py, pm] = p.date.split('-').map(Number);
+    return !(py === yr && pm === mo);
+  });
+
+  const generated = [];
+  const staffLoad = {}; // staffId -> { total, hard }
+  staff.forEach(s => { staffLoad[s.id] = { total:0, hard:0 }; });
+
+  // Build candidate dates per case
+  const dayCount = new Date(yr, mo, 0).getDate();
+  for (const c of cases) {
+    const dates = [];
+    for (let day = 1; day <= dayCount; day++) {
+      let d = new Date(yr, mo-1, day);
+      const wd = d.getDay();
+      if (!c.weekdays.includes(wd)) continue;
+
+      if (isHoliday(d)) {
+        if (c.holiday === 'skip') continue;
+        if (c.holiday === 'next') {
+          d = new Date(d); d.setDate(d.getDate()+1);
+          while (isHoliday(d)||isWeekend(d)) { d.setDate(d.getDate()+1); }
+        }
+      }
+      dates.push(fmtDate(d));
+    }
+    // Deduplicate (moved dates might clash)
+    const unique = [...new Set(dates)].sort();
+
+    // Apply postCount cap if set
+    const target = (c.postCount > 0 && c.postCount < unique.length) ? c.postCount : unique.length;
+    const selected = unique.slice(0, target);
+
+    for (const date of selected) {
+      generated.push({ caseId: c.id, date, platforms: c.platforms, effort: c.effort });
+    }
+  }
+
+  // Sort by date for sequential assignment
+  generated.sort((a,b) => a.date.localeCompare(b.date));
+
+  // Constrained random assignment
+  // Strategy: pick staff with lower load, add small random noise to break ties
+  const newPosts = [];
+  for (const g of generated) {
+    // Score each staff member: lower is better
+    const scores = staff.map(s => {
+      const l = staffLoad[s.id];
+      const hardPenalty = g.effort === 'hard' ? l.hard * 3 : 0;
+      const noise = Math.random() * 0.8; // randomness
+      return { id: s.id, score: l.total + hardPenalty + noise };
+    });
+    scores.sort((a,b) => a.score - b.score);
+    const chosen = scores[0].id;
+
+    staffLoad[chosen].total++;
+    if (g.effort === 'hard') staffLoad[chosen].hard++;
+
+    newPosts.push({
+      id: 'p' + Date.now() + Math.random().toString(36).slice(2,6),
+      date: g.date,
+      caseId: g.caseId,
+      platforms: g.platforms,
+      staffId: chosen,
+      effort: g.effort,
+      memo: '',
+      done: false,
+    });
+  }
+
+  posts = [...posts, ...newPosts];
+  savePosts();
+  if (!silent) {
+    closeGenModal();
+    render();
+    renderSidebar();
+    alert(`✅ ${yr}年${mo}月のスケジュールを生成しました（${newPosts.length}件）`);
+  }
+}
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+function getCase(id)  { return cases.find(c => c.id === id) || {}; }
+function getStaff(id) { return staff.find(s => s.id === id) || {}; }
+function getPF(id)    { return PLATFORMS_MASTER.find(p => p.id === id) || {}; }
+
+function filteredPosts() {
+  const q = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+  return posts.filter(p => {
+    const [py, pm] = p.date.split('-').map(Number);
+    if (py !== currentYear || pm !== currentMonth) return false;
+    if (filterCase !== 'all' && p.caseId !== filterCase) return false;
+    if (filterPF !== 'all' && !p.platforms.includes(filterPF)) return false;
+    if (q) {
+      const c = getCase(p.caseId);
+      const s = getStaff(p.staffId);
+      if (!(c.name||'').toLowerCase().includes(q) && !(s.name||'').toLowerCase().includes(q) && !p.memo.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+// ─────────────────────────────────────────────
+// RENDER SIDEBAR
+// ─────────────────────────────────────────────
+function renderSidebar() {
+  const fp = filteredPosts();
+  const total = fp.length, done = fp.filter(p=>p.done).length;
+  const pct = total > 0 ? Math.round(done/total*100) : 0;
+  const circ = 138.2;
+  document.getElementById('ringCircle').style.strokeDashoffset = circ - (circ * pct / 100);
+  document.getElementById('ringPct').textContent = pct + '%';
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statDone').textContent  = done;
+  document.getElementById('statLeft').textContent  = total - done;
+
+  // Month label
+  document.getElementById('monthLbl').textContent = `${currentYear}年${currentMonth}月`;
+
+  // Cases
+  const sc = document.getElementById('sidebarCases');
+  sc.innerHTML = `<div class="case-item ${filterCase==='all'?'active':''}" onclick="setFilterCase('all')">
+    <div class="case-dot" style="background:#ccc"></div>
+    <div class="case-name">すべて</div>
+    <div class="case-cnt">${fp.length}</div>
+  </div>` + cases.map(c => {
+    const cnt = fp.filter(p=>p.caseId===c.id).length;
+    return `<div class="case-item ${filterCase===c.id?'active':''}" onclick="setFilterCase('${c.id}')">
+      <div class="case-dot" style="background:${c.color}"></div>
+      <div class="case-name" style="font-size:11px">${c.name}</div>
+      <div class="case-cnt">${cnt}</div>
+    </div>`;
+  }).join('');
+
+  // Staff
+  const allFP = posts.filter(p => { const [py,pm]=p.date.split('-').map(Number); return py===currentYear&&pm===currentMonth; });
+  const maxS = Math.max(...staff.map(s=>allFP.filter(p=>p.staffId===s.id).length), 1);
+  document.getElementById('sidebarStaff').innerHTML = staff.map(s => {
+    const cnt = allFP.filter(p=>p.staffId===s.id).length;
+    const hardCnt = allFP.filter(p=>p.staffId===s.id&&p.effort==='hard').length;
+    const pct = Math.round(cnt/maxS*100);
+    return `<div class="staff-row">
+      <div class="staff-avatar" style="background:${s.color}20;color:${s.color}">${s.name.charAt(0)}</div>
+      <div class="staff-info">
+        <div class="staff-name2">${s.name}</div>
+        <div class="staff-bar-wrap"><div class="staff-bar-fill" style="width:${pct}%;background:${s.color}"></div></div>
+      </div>
+      <div class="staff-cnt">${cnt}件 / 大変${hardCnt}</div>
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────
+// RENDER FILTER CHIPS
+// ─────────────────────────────────────────────
+function renderFilters() {
+  document.getElementById('filterChips').innerHTML =
+    `<span class="chip ${filterPF==='all'?'active':''}" onclick="setFilterPF('all')">すべて</span>` +
+    PLATFORMS_MASTER.map(p =>
+      `<span class="chip ${filterPF===p.id?'active':''}" onclick="setFilterPF('${p.id}')">${p.label}</span>`
+    ).join('');
+}
+
+// ─────────────────────────────────────────────
+// RENDER LIST
+// ─────────────────────────────────────────────
+function renderList() {
+  const fp = filteredPosts();
+  const groups = {};
+  fp.forEach(p => { if (!groups[p.date]) groups[p.date]=[]; groups[p.date].push(p); });
+  const dates = Object.keys(groups).sort();
+  if (!dates.length) return `<div class="empty"><div class="empty-icon">🗓</div><div class="empty-text">投稿がありません</div><div class="empty-sub">「＋ 投稿を追加」または「月間自動生成」で作成できます</div></div>`;
+
+  return dates.map(date => {
+    const d = new Date(date); const wd = d.getDay();
+    const wdlbl = WEEKDAY_LABELS[wd];
+    const wdcls = wd===0?'sun':wd===6?'sat':'';
+    const rows = groups[date].map(p => {
+      const c = getCase(p.caseId);
+      const s = getStaff(p.staffId);
+      const plats = (p.platforms||[]).map(id=>{ const pf=getPF(id); return `<span class="pf-tag">${pf.label}</span>`; }).join('');
+      return `<div class="post-card ${p.done?'done':''}" onclick="openEditPost('${p.id}')">
+        <button class="check-circle ${p.done?'checked':''}" onclick="event.stopPropagation();toggleDone('${p.id}')">
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+            <path d="M2 5.5l2.5 2.5L9 3" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="card-body">
+          <div class="card-top">
+            <span class="case-tag" style="background:${c.color}18;color:${c.color}">${c.name||'不明'}</span>
+            <div class="pf-tags">${plats}</div>
+            <span class="effort-badge ${EFFORT_CLS[p.effort]}">${EFFORT_MAP[p.effort]}</span>
+          </div>
+          <div class="card-bottom">
+            <div class="staff-chip">
+              <div class="sa" style="background:${s.color}20;color:${s.color}">${(s.name||'?').charAt(0)}</div>
+              <span>${s.name||'未割当'}</span>
+            </div>
+            ${p.memo?`<span class="memo-chip">• ${p.memo}</span>`:''}
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="icon-btn" onclick="event.stopPropagation();openEditPost('${p.id}')">✎</button>
+          <button class="icon-btn del" onclick="event.stopPropagation();deletePost('${p.id}')">🗑</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div class="day-group">
+      <div class="day-label">
+        <div class="day-badge ${date===todayStr()?'today':''}">${date.slice(5).replace('-','/')}</div>
+        <div class="day-wday ${wdcls}">${wdlbl}</div>
+      </div>
+      ${rows}
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────
+// RENDER CALENDAR
+// ─────────────────────────────────────────────
+function renderCalendar() {
+  const fp = filteredPosts();
+  const byDate = {};
+  fp.forEach(p => { if(!byDate[p.date]) byDate[p.date]=[]; byDate[p.date].push(p); });
+
+  const firstDay = new Date(currentYear, currentMonth-1, 1).getDay();
+  const lastDate = new Date(currentYear, currentMonth, 0).getDate();
+  let html = `<div class="calendar-wrap">
+    <div class="cal-header-row">
+      ${['日','月','火','水','木','金','土'].map((d,i)=>`<div class="cal-dh ${i===0?'sun':i===6?'sat':''}">${d}</div>`).join('')}
+    </div>
+    <div class="cal-grid">`;
+
+  const prevLast = new Date(currentYear, currentMonth-1, 0).getDate();
+  let dayNum = 1;
+  let nextDay = 1;
+  for (let i = 0; i < 42; i++) {
+    const dow = i % 7;
+    if (i < firstDay) {
+      html += `<div class="cal-cell other"><div class="cal-num">${prevLast-(firstDay-i-1)}</div></div>`;
+    } else if (dayNum > lastDate) {
+      html += `<div class="cal-cell other"><div class="cal-num">${nextDay++}</div></div>`;
+    } else {
+      const dateStr = `${currentYear}-${String(currentMonth).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+      const dp = byDate[dateStr] || [];
+      const maxShow = 3;
+      const evHtml = dp.slice(0,maxShow).map(p => {
+        const c = getCase(p.caseId);
+        return `<div class="cal-ev ${p.done?'done':''}" style="background:${c.color}18;color:${c.color}" onclick="event.stopPropagation();openEditPost('${p.id}')">${c.name?.replace('florasKIN ','')}</div>`;
+      }).join('');
+      const moreHtml = dp.length > maxShow ? `<div class="cal-more">+${dp.length-maxShow}件</div>` : '';
+      html += `<div class="cal-cell ${dateStr===todayStr()?'today':''} ${dow===0?'sun':dow===6?'sat':''}" onclick="openAddPostDate('${dateStr}')">
+        <div class="cal-num">${dayNum}</div>
+        <div class="cal-events">${evHtml}${moreHtml}</div>
+      </div>`;
+      dayNum++;
+    }
+  }
+  html += '</div></div>';
+  return html;
+}
+
+// ─────────────────────────────────────────────
+// RENDER CASE MGMT
+// ─────────────────────────────────────────────
+function renderCaseMgmt() {
+  if (!cases.length) {
+    document.getElementById('caseMgmtList').innerHTML = `<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">案件がありません</div></div>`;
+    return;
+  }
+  document.getElementById('caseMgmtList').innerHTML = cases.map(c => {
+    const pfs = c.platforms.map(id=>{ const p=getPF(id); return `<span class="pf-tag">${p.label}</span>`; }).join('');
+    const wds = c.weekdays.map(d=>WEEKDAY_LABELS[d]).join('・');
+    return `<div class="case-mgmt-item">
+      <div class="case-color-dot" style="background:${c.color}"></div>
+      <div class="case-mgmt-body">
+        <div class="case-mgmt-name">${c.name}</div>
+        <div class="case-mgmt-meta">
+          <span>${pfs}</span>
+          <span>📅 ${wds}</span>
+          <span class="effort-badge ${EFFORT_CLS[c.effort]}">${EFFORT_MAP[c.effort]}</span>
+          <span>祝日: ${c.holiday==='next'?'翌平日':c.holiday==='skip'?'お休み':'なし'}</span>
+          ${c.postCount>0?`<span>月${c.postCount}本</span>`:''}
+        </div>
+      </div>
+      <div class="case-mgmt-actions">
+        <button class="icon-btn" onclick="openCaseModal('${c.id}')">✎</button>
+        <button class="icon-btn del" onclick="deleteCase('${c.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────
+// RENDER STAFF MGMT
+// ─────────────────────────────────────────────
+function renderStaffMgmt() {
+  document.getElementById('staffMgmtList').innerHTML = staff.map(s => `
+    <div class="case-mgmt-item">
+      <div class="staff-avatar" style="background:${s.color}20;color:${s.color}">${s.name.charAt(0)}</div>
+      <div class="case-mgmt-body">
+        <div class="case-mgmt-name">${s.name}</div>
+      </div>
+      <div class="case-mgmt-actions">
+        <button class="icon-btn del" onclick="deleteStaffMember('${s.id}')">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+// ─────────────────────────────────────────────
+// MASTER RENDER
+// ─────────────────────────────────────────────
+function render() {
+  renderSidebar();
+  renderFilters();
+  const ca = document.getElementById('contentArea');
+  ca.innerHTML = currentView === 'list' ? renderList() : renderCalendar();
+  if (currentTab === 'cases') renderCaseMgmt();
+  if (currentTab === 'staff') renderStaffMgmt();
+}
+
+// ─────────────────────────────────────────────
+// ACTIONS
+// ─────────────────────────────────────────────
+function setView(v) {
+  currentView = v;
+  document.getElementById('viewList').className = 'nav-btn' + (v==='list'?' active':'');
+  document.getElementById('viewCal').className  = 'nav-btn' + (v==='cal'?' active':'');
+  render();
+}
+function setFilterCase(id) { filterCase = id; render(); }
+function setFilterPF(id) { filterPF = id; render(); }
+
+function toggleDone(id) {
+  const p = posts.find(x=>x.id===id);
+  if(p){ p.done=!p.done; savePosts(); render(); }
+}
+function deletePost(id) {
+  if(!confirm('削除してよいですか？')) return;
+  posts = posts.filter(p=>p.id!==id);
+  savePosts(); render();
+}
+function deleteCase(id) {
+  if(!confirm('案件を削除します。関連する投稿は残ります。よいですか？')) return;
+  cases = cases.filter(c=>c.id!==id); saveCases(); render();
+}
+function deleteStaffMember(id) {
+  if(!confirm('スタッフを削除します。')) return;
+  staff = staff.filter(s=>s.id!==id); saveStaffLS(); render();
+}
+
+function showTab(t) {
+  currentTab = t;
+  ['schedule','cases','staff'].forEach(tab => {
+    document.getElementById('tabPane'+tab.charAt(0).toUpperCase()+tab.slice(1)).style.display = tab===t?'block':'none';
+    document.getElementById('tab'+tab.charAt(0).toUpperCase()+tab.slice(1)).className = 'nav-btn'+(tab===t?' active':'');
+  });
+  if(t==='cases') renderCaseMgmt();
+  if(t==='staff') renderStaffMgmt();
+}
+
+// ─────────────────────────────────────────────
+// POST MODAL
+// ─────────────────────────────────────────────
+function buildPostForm(p) {
+  const caseOpts = cases.map(c=>`<option value="${c.id}" ${p&&p.caseId===c.id?'selected':''}>${c.name}</option>`).join('');
+  document.getElementById('fCase').innerHTML = caseOpts;
+
+  const activeCaseId = p ? p.caseId : cases[0]?.id;
+  buildPlatformCBs(activeCaseId, p?.platforms);
+
+  const staffOpts = staff.map(s=>`<option value="${s.id}" ${p&&p.staffId===s.id?'selected':''}>${s.name}</option>`).join('');
+  document.getElementById('fStaff').innerHTML = staffOpts;
+
+  document.getElementById('fDate').value = p?.date || todayStr();
+  document.getElementById('fMemo').value = p?.memo || '';
+  document.getElementById('fEffort').value = p?.effort || 'mid';
+}
+
+function buildPlatformCBs(caseId, selected) {
+  const c = getCase(caseId);
+  const pfs = c.platforms || PLATFORMS_MASTER.map(p=>p.id);
+  document.getElementById('fPlatforms').innerHTML = pfs.map(id => {
+    const pf = getPF(id);
+    const chk = selected ? selected.includes(id) : true;
+    return `<input type="checkbox" class="cb-input" id="pfcb_${id}" value="${id}" ${chk?'checked':''}><label class="cb-label" for="pfcb_${id}">${pf.label}</label>`;
+  }).join('');
+}
+
+function onCaseChange() {
+  const caseId = document.getElementById('fCase').value;
+  buildPlatformCBs(caseId, null);
+  const c = getCase(caseId);
+  document.getElementById('fEffort').value = c.effort || 'mid';
+}
+
+function openAddPost() {
+  editingPostId = null;
+  document.getElementById('postModalTitle').textContent = '投稿を追加';
+  buildPostForm(null);
+  document.getElementById('postOverlay').classList.add('open');
+}
+function openAddPostDate(dateStr) {
+  editingPostId = null;
+  document.getElementById('postModalTitle').textContent = '投稿を追加';
+  buildPostForm(null);
+  document.getElementById('fDate').value = dateStr;
+  document.getElementById('postOverlay').classList.add('open');
+}
+function openEditPost(id) {
+  const p = posts.find(x=>x.id===id);
+  if(!p) return;
+  editingPostId = id;
+  document.getElementById('postModalTitle').textContent = '投稿を編集';
+  buildPostForm(p);
+  document.getElementById('postOverlay').classList.add('open');
+}
+function closePostModal() { document.getElementById('postOverlay').classList.remove('open'); }
+function savePost() {
+  const date = document.getElementById('fDate').value;
+  const caseId = document.getElementById('fCase').value;
+  const staffId = document.getElementById('fStaff').value;
+  const effort = document.getElementById('fEffort').value;
+  const memo = document.getElementById('fMemo').value;
+  const platforms = [...document.querySelectorAll('#fPlatforms .cb-input:checked')].map(el=>el.value);
+  if(!date||!caseId||!platforms.length){ alert('必須項目を入力してください'); return; }
+  if(editingPostId) {
+    const p = posts.find(x=>x.id===editingPostId);
+    if(p) Object.assign(p,{date,caseId,staffId,effort,platforms,memo});
+  } else {
+    posts.push({ id:'p'+Date.now(), date, caseId, staffId, effort, platforms, memo, done:false });
+  }
+  savePosts(); closePostModal(); render();
+}
+
+// ─────────────────────────────────────────────
+// CASE MODAL
+// ─────────────────────────────────────────────
+function openCaseModal(id) {
+  editingCaseId = id || null;
+  const c = id ? getCase(id) : null;
+  document.getElementById('caseModalTitle').textContent = c ? '案件を編集' : '案件を追加';
+  document.getElementById('cName').value = c?.name || '';
+  document.getElementById('cColor').value = c?.color || '#d4737a';
+  document.getElementById('cEffort').value = c?.effort || 'mid';
+  document.getElementById('cHoliday').value = c?.holiday || 'next';
+  document.getElementById('cPostCount').value = c?.postCount ?? 0;
+
+  document.getElementById('cPlatforms').innerHTML = PLATFORMS_MASTER.map(p => {
+    const chk = c ? c.platforms.includes(p.id) : false;
+    return `<input type="checkbox" class="cb-input" id="cpf_${p.id}" value="${p.id}" ${chk?'checked':''}><label class="cb-label" for="cpf_${p.id}">${p.label}</label>`;
+  }).join('');
+
+  document.getElementById('cWeekdays').innerHTML = [1,2,3,4,5,0,6].map(i => {
+    const chk = c ? c.weekdays.includes(i) : false;
+    return `<input type="checkbox" class="cb-input" id="cwd_${i}" value="${i}" ${chk?'checked':''}><label class="cb-label" for="cwd_${i}">${WEEKDAY_LABELS[i]}</label>`;
+  }).join('');
+
+  document.getElementById('caseOverlay').classList.add('open');
+}
+function closeCaseModal() { document.getElementById('caseOverlay').classList.remove('open'); }
+function saveCase() {
+  const name = document.getElementById('cName').value.trim();
+  if(!name){ alert('案件名を入力してください'); return; }
+  const platforms = [...document.querySelectorAll('#cPlatforms .cb-input:checked')].map(el=>el.value);
+  const weekdays  = [...document.querySelectorAll('#cWeekdays .cb-input:checked')].map(el=>parseInt(el.value));
+  const color = document.getElementById('cColor').value;
+  const effort = document.getElementById('cEffort').value;
+  const holiday = document.getElementById('cHoliday').value;
+  const postCount = parseInt(document.getElementById('cPostCount').value) || 0;
+  if(editingCaseId) {
+    const c = cases.find(x=>x.id===editingCaseId);
+    if(c) Object.assign(c,{name,color,platforms,weekdays,effort,holiday,postCount});
+  } else {
+    cases.push({ id:'c'+Date.now(), name, color, platforms, weekdays, effort, holiday, postCount });
+  }
+  saveCases(); closeCaseModal(); renderCaseMgmt(); renderSidebar();
+}
+
+// ─────────────────────────────────────────────
+// STAFF MODAL
+// ─────────────────────────────────────────────
+function openStaffModal() { document.getElementById('staffOverlay').classList.add('open'); }
+function closeStaffModal() { document.getElementById('staffOverlay').classList.remove('open'); }
+function saveStaff() {
+  const name = document.getElementById('sName').value.trim();
+  if(!name){ alert('名前を入力してください'); return; }
+  const color = document.getElementById('sColor').value;
+  staff.push({ id:'s'+Date.now(), name, color });
+  saveStaffLS(); closeStaffModal(); renderStaffMgmt(); renderSidebar();
+}
+
+// ─────────────────────────────────────────────
+// GENERATE MODAL
+// ─────────────────────────────────────────────
+function openGenerate() {
+  const m = `${currentYear}-${String(currentMonth).padStart(2,'0')}`;
+  document.getElementById('genMonth').value = m;
+  document.getElementById('genOverlay').classList.add('open');
+}
+function closeGenModal() { document.getElementById('genOverlay').classList.remove('open'); }
+
+// Close overlays on backdrop click
+['postOverlay','caseOverlay','staffOverlay','genOverlay'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
+});
+
+// Month nav
+document.getElementById('prevM').onclick = () => {
+  currentMonth--; if(currentMonth<1){currentMonth=12;currentYear--;} render();
+};
+document.getElementById('nextM').onclick = () => {
+  currentMonth++; if(currentMonth>12){currentMonth=1;currentYear++;} render();
+};
+
+// ─── INIT ───
+render();
+</script>
+</body>
+</html>
